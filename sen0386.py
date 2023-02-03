@@ -1,5 +1,5 @@
 from sys import maxsize
-
+ 
 PACKET_HEADER = 0x55
 ACC_PACKET_HEADER = 0x51
 ANGVEL_PACKET_HEADER = 0x52
