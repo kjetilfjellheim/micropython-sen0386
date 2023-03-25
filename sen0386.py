@@ -1,5 +1,6 @@
 from sys import maxsize
- 
+import ustruct
+
 PACKET_HEADER = 0x55
 ACC_PACKET_HEADER = 0x51
 ANGVEL_PACKET_HEADER = 0x52
@@ -40,29 +41,36 @@ CALCULATION_ANGLE_CONSTANT = 180.00
 
 UNDEFINED = maxsize
 
+def convertShort(packet, highByte, lowByte):
+    b = bytearray(2)
+    b[0] = packet[highByte]
+    b[1] = packet[lowByte]
+    result = ustruct.unpack(">h", b)[0]
+    return result
+
 def handleAccPacket(accPacketData):
     if len(accPacketData) == PACKET_LENGTH and accPacketData[BYTE_PACKET_HEADER] is PACKET_HEADER and accPacketData[BYTE_PACKET_TYPE] is ACC_PACKET_HEADER:
-        ax = (CALCULATION_GRAVITY_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * ((accPacketData[BYTE_AXH_DATA_CONTENT]<<8)|accPacketData[BYTE_AXL_DATA_CONTENT])
-        ay = (CALCULATION_GRAVITY_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * ((accPacketData[BYTE_AYH_DATA_CONTENT]<<8)|accPacketData[BYTE_AYL_DATA_CONTENT])
-        az = (CALCULATION_GRAVITY_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * ((accPacketData[BYTE_AZH_DATA_CONTENT]<<8)|accPacketData[BYTE_AZL_DATA_CONTENT])
+        ax = (CALCULATION_GRAVITY_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * convertShort(accPacketData, BYTE_AXH_DATA_CONTENT, BYTE_AXL_DATA_CONTENT)
+        ay = (CALCULATION_GRAVITY_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * convertShort(accPacketData, BYTE_AYH_DATA_CONTENT, BYTE_AYL_DATA_CONTENT)
+        az = (CALCULATION_GRAVITY_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * convertShort(accPacketData, BYTE_AZH_DATA_CONTENT, BYTE_AZL_DATA_CONTENT)
         return ax, ay, az
     else:
         return UNDEFINED, UNDEFINED ,UNDEFINED
 
 def handleAngVelPacket(angVelPacketData):
     if len(angVelPacketData) == PACKET_LENGTH and angVelPacketData[BYTE_PACKET_HEADER] is PACKET_HEADER and angVelPacketData[BYTE_PACKET_TYPE] is ANGVEL_PACKET_HEADER:
-        wx = (CALCULATION_ROTATION_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * ((angVelPacketData[BYTE_WXH_DATA_CONTENT]<<8)|angVelPacketData[BYTE_WXL_DATA_CONTENT])
-        wy = (CALCULATION_ROTATION_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * ((angVelPacketData[BYTE_WYH_DATA_CONTENT]<<8)|angVelPacketData[BYTE_WYL_DATA_CONTENT])
-        wz = (CALCULATION_ROTATION_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * ((angVelPacketData[BYTE_WZH_DATA_CONTENT]<<8)|angVelPacketData[BYTE_WZL_DATA_CONTENT])
+        wx = (CALCULATION_ROTATION_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * convertShort(angVelPacketData, BYTE_WXH_DATA_CONTENT, BYTE_WXL_DATA_CONTENT)
+        wy = (CALCULATION_ROTATION_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * convertShort(angVelPacketData, BYTE_WYH_DATA_CONTENT, BYTE_WYL_DATA_CONTENT)
+        wz = (CALCULATION_ROTATION_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * convertShort(angVelPacketData, BYTE_WZH_DATA_CONTENT, BYTE_WZL_DATA_CONTENT)
         return wx, wy, wz
     else:
         return UNDEFINED, UNDEFINED , UNDEFINED
 
 def handleAngPacket(angPacketData):
     if len(angPacketData) == PACKET_LENGTH and angPacketData[BYTE_PACKET_HEADER] is PACKET_HEADER and angPacketData[BYTE_PACKET_TYPE] is ANG_PACKET:
-        roll = (CALCULATION_ANGLE_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * ((angPacketData[BYTE_ROLLH_DATA_CONTENT]<<8)|angPacketData[BYTE_ROLLL_DATA_CONTENT])
-        pitch = (CALCULATION_ANGLE_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * ((angPacketData[BYTE_PITCHH_DATA_CONTENT]<<8)|angPacketData[BYTE_PITCHL_DATA_CONTENT])
-        yaw = (CALCULATION_ANGLE_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * ((angPacketData[BYTE_YAWH_DATA_CONTENT]<<8)|angPacketData[BYTE_YAWL_DATA_CONTENT])
+        roll = (CALCULATION_ANGLE_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * convertShort(angPacketData, BYTE_ROLLH_DATA_CONTENT, BYTE_ROLLL_DATA_CONTENT)
+        pitch = (CALCULATION_ANGLE_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * convertShort(angPacketData, BYTE_PITCHH_DATA_CONTENT, BYTE_PITCHL_DATA_CONTENT)
+        yaw = (CALCULATION_ANGLE_CONSTANT / MAX_16_BIT_INTEGER_SIZE) * convertShort(angPacketData, BYTE_YAWH_DATA_CONTENT, BYTE_YAWL_DATA_CONTENT)
         return roll, pitch, yaw
     return UNDEFINED, UNDEFINED, UNDEFINED
 
@@ -74,7 +82,7 @@ def handlePackets(accPacketData, angVelPacketData, angPacketData):
 
 def readSensorValues(uart):
     data = uart.read(BUFFER_SIZE)
-    if data is not None:
+    if data is not None and len(data) == BUFFER_SIZE:
         accPacket = data[ACCPACKET_BUFFER_START:ACCPACKET_BUFFER_END]
         angVelPacket = data[ANGVELPACKET_BUFFER_START:ANGVELPACKET_BUFFER_END]
         angPacket = data[ANGPACKET_BUFFER_START:ANGPACKET_BUFFER_END]
@@ -82,5 +90,3 @@ def readSensorValues(uart):
         return ax, ay, az, wx, wy, wz, roll, pitch, yaw
     else:
         return UNDEFINED, UNDEFINED, UNDEFINED, UNDEFINED, UNDEFINED, UNDEFINED, UNDEFINED, UNDEFINED, UNDEFINED
-
-
